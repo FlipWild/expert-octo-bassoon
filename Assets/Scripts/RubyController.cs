@@ -7,36 +7,38 @@ public class RubyController : MonoBehaviour
     public float speed = 3.0f;
 
     public int maxHealth = 5;
-
-    public int health { get { return currentHealth; }}
-    int currentHealth;
-
     public float timeInvincible = 2.0f;
+    public GameObject projectilePrefab;
+
+
+    public int health { get { return currentHealth; } }
+    int currentHealth;
     bool isInvincible;
     float invincibleTimer;
-
-    public GameObject projectilePrefab;
 
     Rigidbody2D rigidbody2d;
 
     Animator animator;
     Vector2 lookDirection = new Vector2(1, 0);
 
+    public AudioClip throwSound;
+    public AudioClip hitSound;
+
+    AudioSource audioSource;
     // Start is called before the first frame update
     void Start()
     {
+        rigidbody2d = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
 
-        rigidbody2d = GetComponent<Rigidbody2D>();
-
         currentHealth = maxHealth;
+
+        audioSource = GetComponent<AudioSource>();
     }
 
     // Update is called once per frame
     void Update()
     {
-
-        /// Calls Unity's Horizontal and Vertical GetAxis function
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
 
@@ -52,10 +54,10 @@ public class RubyController : MonoBehaviour
         animator.SetFloat("Look Y", lookDirection.y);
         animator.SetFloat("Speed", move.magnitude);
 
-        /// Moves Ruby in a frame independent manner
         Vector2 position = rigidbody2d.position;
+
         position = position + move * speed * Time.deltaTime;
-        
+
         rigidbody2d.MovePosition(position);
 
         if (isInvincible)
@@ -69,6 +71,19 @@ public class RubyController : MonoBehaviour
         {
             Launch();
         }
+
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            RaycastHit2D hit = Physics2D.Raycast(rigidbody2d.position + Vector2.up * 0.2f, lookDirection, 1.5f, LayerMask.GetMask("NPC"));
+            if (hit.collider != null)
+            {
+                NonPlayerCharacter character = hit.collider.GetComponent<NonPlayerCharacter>();
+                if (character != null)
+                {
+                    character.DisplayDialog();
+                }
+            }
+        }
     }
 
     public void ChangeHealth(int amount)
@@ -80,20 +95,30 @@ public class RubyController : MonoBehaviour
 
             isInvincible = true;
             invincibleTimer = timeInvincible;
+
+            PlaySound(hitSound);
         }
 
         currentHealth = Mathf.Clamp(currentHealth + amount, 0, maxHealth);
-        Debug.Log(currentHealth + "/" + maxHealth);
 
-        
+        UIHealthBar.instance.SetValue(currentHealth / (float)maxHealth);
     }
 
     void Launch()
     {
-        GameObject projectileObject = Instantiate(projectilePrefab, rigidbody2d.position + Vector2.up * 0 / 5f, Quaternion.identity);
+        GameObject projectileObject = Instantiate(projectilePrefab, rigidbody2d.position + Vector2.up * 0.5f, Quaternion.identity);
+
         Projectile projectile = projectileObject.GetComponent<Projectile>();
         projectile.Launch(lookDirection, 300);
 
         animator.SetTrigger("Launch");
+
+        PlaySound(throwSound);
+    }
+
+    public void PlaySound(AudioClip clip)
+    {
+        
+        audioSource.PlayOneShot(clip);
     }
 }
